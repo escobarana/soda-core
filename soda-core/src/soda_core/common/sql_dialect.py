@@ -1098,6 +1098,7 @@ class SqlDialect:
         offers none. The data source refuses writes in it where it has a read-only mode; a dialect
         without one begins a transaction that the caller rolls back. For an application running
         user-authored reads; ``rollback_sql`` ends it.
+        A dialect may commit the transaction on DDL, so the caller refuses DDL in it.
         """
         if not self.SUPPORTS_DATA_PLANE_STATEMENTS:
             return None
