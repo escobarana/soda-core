@@ -1,6 +1,7 @@
 from typing import Optional
 from unittest import mock
 
+import pytest
 from helpers.data_source_test_helper import DataSourceTestHelper
 from helpers.test_table import TestTableSpecification
 from soda_core.common.soda_cloud_dto import ComputeWarehouseOverrideDTO, DatasetConfigurationDTO
@@ -30,6 +31,14 @@ def stub_get_current_warehouse_none() -> Optional[str]:
     return None
 
 
+def unset_configured_warehouse(data_source_test_helper: DataSourceTestHelper, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A configured warehouse is taken as the current one, and get_current_warehouse is then never called.
+    connection = data_source_test_helper.data_source_impl.data_source_connection
+    monkeypatch.setattr(
+        connection, "connection_properties", connection.connection_properties.model_copy(update={"warehouse": None})
+    )
+
+
 @mock.patch(
     "soda_core.common.env_config_helper.EnvConfigHelper.is_running_on_runner",
     new_callable=mock.PropertyMock(return_value=True),
@@ -47,6 +56,7 @@ def test_warehouse_switching(
     mocked_switch_warehouse,
     mocked_get_current_warehouse,
     data_source_test_helper: DataSourceTestHelper,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     test_table = data_source_test_helper.ensure_test_table(test_table_specification)
     data_source_test_helper.enable_soda_cloud_mock()
@@ -57,6 +67,8 @@ def test_warehouse_switching(
             compute_warehouse_override=ComputeWarehouseOverrideDTO(name="NEW_WAREHOUSE")
         ),
     )
+
+    unset_configured_warehouse(data_source_test_helper, monkeypatch)
 
     contract_verification_result: ContractVerificationResult = data_source_test_helper.assert_contract_pass(
         test_table=test_table,
@@ -90,6 +102,7 @@ def test_warehouse_switching_no_current_wh(
     mocked_switch_warehouse,
     mocked_get_current_warehouse,
     data_source_test_helper: DataSourceTestHelper,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     test_table = data_source_test_helper.ensure_test_table(test_table_specification)
     data_source_test_helper.enable_soda_cloud_mock()
@@ -100,6 +113,8 @@ def test_warehouse_switching_no_current_wh(
             compute_warehouse_override=ComputeWarehouseOverrideDTO(name="NEW_WAREHOUSE")
         ),
     )
+
+    unset_configured_warehouse(data_source_test_helper, monkeypatch)
 
     contract_verification_result: ContractVerificationResult = data_source_test_helper.assert_contract_pass(
         test_table=test_table,
